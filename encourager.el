@@ -9,7 +9,6 @@
 ;; URL: https://github.com/lujun9972/encourager
 
 ;; This file is NOT part of GNU Emacs.
-
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
@@ -47,11 +46,15 @@
   :group 'encourager
   :type '(file :must-match t))
 
+(defun encouragr--get-image (encourager-buffer)
+  "Return encourager image which displayed in ENCOURAGER-BUFFER"
+  (get-char-property (point-min) 'display
+                     (or (get-buffer encourager-buffer)
+                         (error "no encourager buffer found"))))
+
 (defun encourager--image-show-next-frame (&optional image max-frame)
   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
-  (let* ((image (or image (get-char-property (point-min) 'display
-                                             (or (get-buffer encourager-buffer)
-                                                 (error "no encourager buffer found")))))
+  (let* ((image (or image (encouraer--get-image encourager-buffer)))
          (max-frame (or max-frame
                         (car (image-multi-frame-p image))))
          (current-frame (image-current-frame image)))
