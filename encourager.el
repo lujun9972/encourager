@@ -60,6 +60,7 @@
                              max-frame)))
         (image-show-frame image next-frame t)))))
 
+;;;###autoload
 (defun encourager-enable ()
   (interactive)
   (let ((image (create-image encourager-image-file)))
@@ -68,7 +69,7 @@
         (erase-buffer)
         (insert-image image))
       (add-hook 'post-self-insert-hook #'encourager--image-show-next-frame))))
-
+;;;###autoload
 (defun encourager-disable ()
   (interactive)
   (remove-hook 'post-self-insert-hook #'encourager--image-show-next-frame)
@@ -76,3 +77,6 @@
     (kill-buffer encourager-buffer)))
 
 (provide 'encourager)
+
+
+;;; encourager.el ends here
