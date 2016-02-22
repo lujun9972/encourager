@@ -47,11 +47,6 @@
   :group 'encourager
   :type '(file :must-match t))
 
-(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
-  ""
-  :group 'encourager
-  :type '(file :must-match t))
-
 
 (defun encourager--get-image (encourager-buffer)
   "Return encourager image which displayed in ENCOURAGER-BUFFER"
@@ -59,24 +54,39 @@
                      (or (get-buffer encourager-buffer)
                          (error "no encourager buffer found"))))
 
-;; (defvar encourager-image-animate-stop-timer nil)
+(defvar encourager-image-animate-stop-timer nil)
 
-;; (defun encourager--stop-image-animate (image)
-;;   ""
-;;   (cancel-timer (image-animate-timer image)))
+(defvar encourager--image-stopped t)
 
-;; (defun encourager--restart-image-timer (&optional delay-seconds)
-;;   "restart image timer which will be stopped again after DELAY-SECONDS seconds"
-;;   (let* ((delay-seconds (or delay-seconds
-;;                             1))
-;;          (image (encourager--get-image encourager-buffer))
-;;          (current-frame (image-current-frame image)))
-;;     (image-animate image current-frame t)
-;;     (when (timerp encourager-image-animate-stop-timer)
-;;       (cancel-timer encourager-image-animate-stop-timer))
-;;     (setq encourager-image-animate-stop-timer
-;;           (run-at-time delay-seconds nil (lambda ()
-;;                                            (encourager--stop-image-animate image))))))
+(defun encourager--pause-image-animate (image)
+  "encourager--image"
+  (unless encourager--image-stopped
+    (cancel-timer (image-animate-timer image))
+    (setq encourager--image-stopped t)))
+
+(defun encourager--resume-image-animate (image)
+  "encourager--image"
+  (let ((current-frame (image-current-frame image)))
+    (when encourager--image-stopped
+      (image-animate image current-frame t)
+      (setq encourager--image-stopped nil))))
+
+(defun encourager--restart-image-timer (&optional delay-seconds)
+  "restart image timer which will be stopped again after DELAY-SECONDS seconds"
+  (let* ((delay-seconds (or delay-seconds
+                            1))
+         (image (encourager--get-image encourager-buffer)))
+    (encourager--resume-image-animate image)
+    (when (timerp encourager-image-animate-stop-timer)
+      (cancel-timer encourager-image-animate-stop-timer))
+    (setq encourager-image-animate-stop-timer
+          (run-at-time delay-seconds nil (lambda ()
+                                           (encourager--pause-image-animate image))))))
+
+(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
+  ""
+  :group 'encourager
+  :type '(file :must-match t))
 
 (defcustom encourager-music-player-proc-name "*encourager-music*"
   ""
@@ -114,20 +124,20 @@
                                    (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-C" music-file)
                                                           (process-sentinel proc)))))))
 
-(defun encourager--image-show-next-frame (&optional image max-frame)
-  "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
-  (let* ((image (or image (encourager--get-image encourager-buffer)))
-         (max-frame (or max-frame
-                        (car (image-multi-frame-p image))))
-         (current-frame (image-current-frame image)))
-    (when max-frame
-      (let* ((next-frame (mod (+ 1 current-frame)
-                              max-frame)))
-        (image-show-frame image next-frame t)))))
+;; (defun encourager--image-show-next-frame (&optional image max-frame)
+;;   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
+;;   (let* ((image (or image (encourager--get-image encourager-buffer)))
+;;          (max-frame (or max-frame
+;;                         (car (image-multi-frame-p image))))
+;;          (current-frame (image-current-frame image)))
+;;     (when max-frame
+;;       (let* ((next-frame (mod (+ 1 current-frame)
+;;                               max-frame)))
+;;         (image-show-frame image next-frame t)))))
 
 (defun encourager--play ()
-  (encourager--image-show-next-frame)
-  ;; (encourager--restart-image-timer 1)
+  ;; (encourager--image-show-next-frame)
+  (encourager--restart-image-timer 1)
   (encourager--restart-music-timer 1))
 
 ;;;###autoload
