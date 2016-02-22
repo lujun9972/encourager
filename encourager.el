@@ -46,7 +46,7 @@
   :group 'encourager
   :type '(file :must-match t))
 
-(defun encouragr--get-image (encourager-buffer)
+(defun encourager--get-image (encourager-buffer)
   "Return encourager image which displayed in ENCOURAGER-BUFFER"
   (get-char-property (point-min) 'display
                      (or (get-buffer encourager-buffer)
@@ -54,7 +54,7 @@
 
 (defun encourager--image-show-next-frame (&optional image max-frame)
   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
-  (let* ((image (or image (encouraer--get-image encourager-buffer)))
+  (let* ((image (or image (encourager--get-image encourager-buffer)))
          (max-frame (or max-frame
                         (car (image-multi-frame-p image))))
          (current-frame (image-current-frame image)))
@@ -71,11 +71,11 @@
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
         (insert-image image))
-      (add-hook 'post-self-insert-hook #'encourager--image-show-next-frame))))
+      (add-hook 'post-command-hook 'encourager--image-show-next-frame))))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
-  (remove-hook 'post-self-insert-hook #'encourager--image-show-next-frame)
+  (remove-hook 'post-command-hook #'encourager--image-show-next-frame)
   (when (buffer-live-p (get-buffer encourager-buffer))
     (kill-buffer encourager-buffer)))
 
