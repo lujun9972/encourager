@@ -1,4 +1,4 @@
-;;; encourager.el --- atom-miku like plugin  -*- lexical-binding: t; -*-
+;;; encourager.el --- encourage to use emacs  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 
@@ -29,22 +29,29 @@
 
 ;;; Commentary:
 
-;; encourager is an atom-miku like plugin
+;; encourager is an atom-miku like plugin. It will display a girl dancing while using emacs.
+;; When you stopped using emacs, the girl stopped dancing either.
 
 ;;; Code:
 
 (defgroup encourager nil
   "")
 
-(defcustom encourager-buffer "*encourager"
+(defcustom encourager-buffer "*encourager*"
   " Buffer used to display encourager-image"
   :group 'encourager
   :type 'string)
 
-(defcustom encourager-image-file (concat (file-name-directory buffer-file-name)  "miku.gif")
+(defcustom encourager-image-file (concat (file-name-directory buffer-file-name)  "dancing.gif")
   "Multi-frame image file to be displayed as encourager"
   :group 'encourager
   :type '(file :must-match t))
+
+(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
+  ""
+  :group 'encourager
+  :type '(file :must-match t))
+
 
 (defun encourager--get-image (encourager-buffer)
   "Return encourager image which displayed in ENCOURAGER-BUFFER"
@@ -54,7 +61,7 @@
 
 ;; (defvar encourager-image-animate-stop-timer nil)
 
-;; (defun encourager--stop-image-animate ()
+;; (defun encourager--stop-image-animate (image)
 ;;   ""
 ;;   (cancel-timer (image-animate-timer image)))
 
@@ -71,29 +78,41 @@
 ;;           (run-at-time delay-seconds nil (lambda ()
 ;;                                            (encourager--stop-image-animate image))))))
 
-(defvar encourager-music-player-proc nil
-  "process used to play music")
+(defcustom encourager-music-player-proc-name "*encourager-music*"
+  ""
+  :group 'encourager
+  :type '(file :must-match t))
 
 (defvar encourager-music-stop-timer nil)
 
-(defun encourager--pause-music (proc)
+(defun encourager--pause-music (&optional proc)
   ""
-  (signal-process proc 'SIGSTOP))
+  (let ((proc (or proc
+                  (get-process encourager-music-player-proc-name))))
+    (signal-process proc 'SIGSTOP)))
 
-(defun encourager--resume-music (proc)
+(defun encourager--resume-music (&optional proc)
   ""
-  (signal-process proc 'SIGCONT))
+  (let ((proc (or proc
+                  (get-process encourager-music-player-proc-name))))
+    (signal-process proc 'SIGCONT)))
 
-(defun encourager--restart-image-timer (&optional delay-seconds)
+(defun encourager--restart-music-timer (&optional delay-seconds)
   "restart to play music which will be stopped again after DELAY-SECONDS seconds"
-  (let* ((delay-seconds (or delay-seconds
-                            1)))
-    (encourager--resume-music encourager-music-player-proc)
+  (let* ((delay-seconds (or delay-seconds 1)))
+    (encourager--resume-music)
     (when (timerp encourager-music-stop-timer)
       (cancel-timer encourager-music-stop-timer))
     (setq encourager-music-stop-timer
-          (run-at-time delay-seconds nil (lambda ()
-                                           (encourager--stop-music encourager-music-player-proc))))))
+          (run-at-time delay-seconds nil #'encourager--pause-music))))
+
+(defun encourager--play-music-in-loop (music-file)
+  "play MUSIC-FILE in loop"
+  (let ((proc (start-process encourager-music-player-proc-name nil "mpg123" "-C" music-file)))
+    (set-process-sentinel proc (lambda (proc event)
+                                 (when (eq 'exit (process-status proc))
+                                   (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-C" music-file)
+                                                          (process-sentinel proc)))))))
 
 (defun encourager--image-show-next-frame (&optional image max-frame)
   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
@@ -104,23 +123,30 @@
     (when max-frame
       (let* ((next-frame (mod (+ 1 current-frame)
                               max-frame)))
-       (image-show-frame image next-frame t)))))
+        (image-show-frame image next-frame t)))))
+
+(defun encourager--play ()
+  (encourager--image-show-next-frame)
+  ;; (encourager--restart-image-timer 1)
+  (encourager--restart-music-timer 1))
 
 ;;;###autoload
 (defun encourager-enable ()
   (interactive)
   (let ((image (create-image encourager-image-file)))
     (when image
+      (encourager--play-music-in-loop encourager-music-file)
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
         (insert-image image))
-      (add-hook 'post-command-hook 'encourager--image-show-next-frame))))
+      (add-hook 'post-command-hook 'encourager--play))))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
-  (remove-hook 'post-command-hook #'encourager--image-show-next-frame)
+  (remove-hook 'post-command-hook #'encourager--play)
   (when (buffer-live-p (get-buffer encourager-buffer))
-    (kill-buffer encourager-buffer)))
+    (kill-buffer encourager-buffer))
+  (delete-process (get-process encourager-music-player-proc-name)))
 
 (provide 'encourager)
 
