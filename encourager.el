@@ -52,6 +52,49 @@
                      (or (get-buffer encourager-buffer)
                          (error "no encourager buffer found"))))
 
+;; (defvar encourager-image-animate-stop-timer nil)
+
+;; (defun encourager--stop-image-animate ()
+;;   ""
+;;   (cancel-timer (image-animate-timer image)))
+
+;; (defun encourager--restart-image-timer (&optional delay-seconds)
+;;   "restart image timer which will be stopped again after DELAY-SECONDS seconds"
+;;   (let* ((delay-seconds (or delay-seconds
+;;                             1))
+;;          (image (encourager--get-image encourager-buffer))
+;;          (current-frame (image-current-frame image)))
+;;     (image-animate image current-frame t)
+;;     (when (timerp encourager-image-animate-stop-timer)
+;;       (cancel-timer encourager-image-animate-stop-timer))
+;;     (setq encourager-image-animate-stop-timer
+;;           (run-at-time delay-seconds nil (lambda ()
+;;                                            (encourager--stop-image-animate image))))))
+
+(defvar encourager-music-player-proc nil
+  "process used to play music")
+
+(defvar encourager-music-stop-timer nil)
+
+(defun encourager--pause-music (proc)
+  ""
+  (signal-process proc 'SIGSTOP))
+
+(defun encourager--resume-music (proc)
+  ""
+  (signal-process proc 'SIGCONT))
+
+(defun encourager--restart-image-timer (&optional delay-seconds)
+  "restart to play music which will be stopped again after DELAY-SECONDS seconds"
+  (let* ((delay-seconds (or delay-seconds
+                            1)))
+    (encourager--resume-music encourager-music-player-proc)
+    (when (timerp encourager-music-stop-timer)
+      (cancel-timer encourager-music-stop-timer))
+    (setq encourager-music-stop-timer
+          (run-at-time delay-seconds nil (lambda ()
+                                           (encourager--stop-music encourager-music-player-proc))))))
+
 (defun encourager--image-show-next-frame (&optional image max-frame)
   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
   (let* ((image (or image (encourager--get-image encourager-buffer)))
@@ -60,8 +103,8 @@
          (current-frame (image-current-frame image)))
     (when max-frame
       (let* ((next-frame (mod (+ 1 current-frame)
-                             max-frame)))
-        (image-show-frame image next-frame t)))))
+                              max-frame)))
+       (image-show-frame image next-frame t)))))
 
 ;;;###autoload
 (defun encourager-enable ()
