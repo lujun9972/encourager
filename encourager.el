@@ -72,7 +72,6 @@
   :group 'encourager
   :type '(file :must-match t))
 
-(setq encourager-music-file "/cygdrive/c/tmp/ry01.mp3")
 (defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
   ""
   :group 'encourager
