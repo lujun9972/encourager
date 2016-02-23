@@ -108,10 +108,12 @@
 
 (defun encourager--play-music-in-loop (music-file)
   "play MUSIC-FILE in loop"
-  (let ((proc (start-process encourager-music-player-proc-name nil "mpg123" "-C" music-file)))
+  (unless (file-exists-p music-file)
+    (error "%s does not exist!" music-file))
+  (let ((proc (start-process encourager-music-player-proc-name nil "mpg123" "-q" music-file)))
     (set-process-sentinel proc (lambda (proc event)
                                  (when (eq 'exit (process-status proc))
-                                   (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-C" music-file)
+                                   (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-q" music-file)
                                                           (process-sentinel proc)))))))
 
 ;; (defun encourager--image-show-next-frame (&optional image max-frame)
@@ -129,8 +131,9 @@
 (defun encourager-enable ()
   (interactive)
   (let ((image (create-image encourager-image-file)))
+    (when (file-exists-p encourager-music-file)
+      (encourager--play-music-in-loop encourager-music-file))
     (when image
-      (encourager--play-music-in-loop encourager-music-file)
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
         (insert-image image))
