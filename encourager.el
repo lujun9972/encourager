@@ -54,67 +54,57 @@
                      (or (get-buffer encourager-buffer)
                          (error "no encourager buffer found"))))
 
-(defvar encourager-image-animate-stop-timer nil)
-
-(defvar encourager--image-stopped t)
-
-(defun encourager--pause-image-animate (image)
+(defun encourager--pause-image-animate (&optional image)
   "encourager--image"
-  (unless encourager--image-stopped
-    (cancel-timer (image-animate-timer image))
-    (setq encourager--image-stopped t)))
+  (let ((image (or image
+                   (encourager--get-image encourager-buffer))))
+    (cancel-timer (image-animate-timer image))))
 
-(defun encourager--resume-image-animate (image)
+(defun encourager--resume-image-animate (&optional image)
   "encourager--image"
-  (let ((current-frame (image-current-frame image)))
-    (when encourager--image-stopped
-      (image-animate image current-frame t)
-      (setq encourager--image-stopped nil))))
-
-(defun encourager--restart-image-timer (&optional delay-seconds)
-  "restart image timer which will be stopped again after DELAY-SECONDS seconds"
-  (let* ((delay-seconds (or delay-seconds
-                            1))
-         (image (encourager--get-image encourager-buffer)))
-    (encourager--resume-image-animate image)
-    (when (timerp encourager-image-animate-stop-timer)
-      (cancel-timer encourager-image-animate-stop-timer))
-    (setq encourager-image-animate-stop-timer
-          (run-at-time delay-seconds nil (lambda ()
-                                           (encourager--pause-image-animate image))))))
-
-(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
-  ""
-  :group 'encourager
-  :type '(file :must-match t))
+  (let* ((image (or image
+                    (encourager--get-image encourager-buffer)))
+         (current-frame (image-current-frame image)))
+    (image-animate image current-frame t)))
 
 (defcustom encourager-music-player-proc-name "*encourager-music*"
   ""
   :group 'encourager
   :type '(file :must-match t))
 
-(defvar encourager-music-stop-timer nil)
+(setq encourager-music-file "/cygdrive/c/tmp/ry01.mp3")
+(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
+  ""
+  :group 'encourager
+  :type '(file :must-match t))
 
 (defun encourager--pause-music (&optional proc)
   ""
   (let ((proc (or proc
                   (get-process encourager-music-player-proc-name))))
-    (signal-process proc 'SIGSTOP)))
+    (when (processp proc) 
+      (signal-process proc 'SIGSTOP))))
 
 (defun encourager--resume-music (&optional proc)
   ""
   (let ((proc (or proc
                   (get-process encourager-music-player-proc-name))))
-    (signal-process proc 'SIGCONT)))
+    (when (processp proc)
+      (signal-process proc 'SIGCONT))))
 
-(defun encourager--restart-music-timer (&optional delay-seconds)
-  "restart to play music which will be stopped again after DELAY-SECONDS seconds"
-  (let* ((delay-seconds (or delay-seconds 1)))
+(defun encourager--pause ()
+  (encourager--pause-image-animate)
+  (encourager--pause-music)
+  (add-hook 'post-command-hook 'encourager--resume))
+
+(defun encourager--resume (&optional delay-seconds)
+  (let ((delay-seconds (or delay-seconds
+                           10)))
+    (encourager--resume-image-animate)
     (encourager--resume-music)
-    (when (timerp encourager-music-stop-timer)
-      (cancel-timer encourager-music-stop-timer))
-    (setq encourager-music-stop-timer
-          (run-at-time delay-seconds nil #'encourager--pause-music))))
+    (remove-hook 'post-command-hook #'encourager--resume)
+    (run-with-idle-timer delay-seconds nil #'encourager--pause)))
+
 
 (defun encourager--play-music-in-loop (music-file)
   "play MUSIC-FILE in loop"
@@ -135,11 +125,6 @@
 ;;                               max-frame)))
 ;;         (image-show-frame image next-frame t)))))
 
-(defun encourager--play ()
-  ;; (encourager--image-show-next-frame)
-  (encourager--restart-image-timer 1)
-  (encourager--restart-music-timer 1))
-
 ;;;###autoload
 (defun encourager-enable ()
   (interactive)
@@ -149,11 +134,11 @@
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
         (insert-image image))
-      (add-hook 'post-command-hook 'encourager--play))))
+      (encourager--resume))))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
-  (remove-hook 'post-command-hook #'encourager--play)
+  (encourager--pause)
   (when (buffer-live-p (get-buffer encourager-buffer))
     (kill-buffer encourager-buffer))
   (delete-process (get-process encourager-music-player-proc-name)))
