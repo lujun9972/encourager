@@ -34,6 +34,8 @@
 
 ;;; Code:
 
+(require 'auto-pause)
+
 (defgroup encourager nil
   "")
 
@@ -56,9 +58,11 @@
 
 (defun encourager--pause-image-animate (&optional image)
   "encourager--image"
-  (let ((image (or image
-                   (encourager--get-image encourager-buffer))))
-    (cancel-timer (image-animate-timer image))))
+  (let* ((image (or image
+                    (encourager--get-image encourager-buffer)))
+         (timer (image-animate-timer image)))
+    (when (timerp timer)
+      (cancel-timer timer))))
 
 (defun encourager--resume-image-animate (&optional image)
   "encourager--image"
@@ -81,28 +85,21 @@
   ""
   (let ((proc (or proc
                   (get-process encourager-music-player-proc-name))))
-    (when (processp proc) 
-      (signal-process proc 'SIGSTOP))))
+    (auto-pause-pause-process proc)))
 
 (defun encourager--resume-music (&optional proc)
   ""
   (let ((proc (or proc
                   (get-process encourager-music-player-proc-name))))
-    (when (processp proc)
-      (signal-process proc 'SIGCONT))))
+    (auto-pause-resume-process proc)))
 
 (defun encourager--pause ()
   (encourager--pause-image-animate)
-  (encourager--pause-music)
-  (add-hook 'post-command-hook 'encourager--resume))
+  (encourager--pause-music))
 
-(defun encourager--resume (&optional delay-seconds)
-  (let ((delay-seconds (or delay-seconds
-                           10)))
-    (encourager--resume-image-animate)
-    (encourager--resume-music)
-    (remove-hook 'post-command-hook #'encourager--resume)
-    (run-with-idle-timer delay-seconds nil #'encourager--pause)))
+(defun encourager--resume ()
+  (encourager--resume-image-animate)
+  (encourager--resume-music))
 
 
 (defun encourager--play-music-in-loop (music-file)
@@ -115,16 +112,7 @@
                                    (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-q" music-file)
                                                           (process-sentinel proc)))))))
 
-;; (defun encourager--image-show-next-frame (&optional image max-frame)
-;;   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
-;;   (let* ((image (or image (encourager--get-image encourager-buffer)))
-;;          (max-frame (or max-frame
-;;                         (car (image-multi-frame-p image))))
-;;          (current-frame (image-current-frame image)))
-;;     (when max-frame
-;;       (let* ((next-frame (mod (+ 1 current-frame)
-;;                               max-frame)))
-;;         (image-show-frame image next-frame t)))))
+(defvar encourager--abort-function nil)
 
 ;;;###autoload
 (defun encourager-enable ()
@@ -135,12 +123,15 @@
     (when image
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
-        (insert-image image))
-      (encourager--resume))))
+        (insert-image image)
+        (image-animate image))
+      (setq encourager--abort-function (auto-pause #'encourager--pause
+                                                   #'encourager--resume
+                                                   2)))))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
-  (encourager--pause)
+  (funcall encourager--abort-function)
   (when (buffer-live-p (get-buffer encourager-buffer))
     (kill-buffer encourager-buffer))
   (delete-process (get-process encourager-music-player-proc-name)))
