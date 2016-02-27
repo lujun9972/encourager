@@ -52,6 +52,10 @@
   :group 'encourager
   :type '(file :must-match t))
 
+(defcustom encourager-interval 10
+  ""
+  :group 'encourager
+  :type 'number)
 
 (defun encourager--play-media-in-loop (media-file)
   "play MEDIA-FILE in loop"
@@ -63,7 +67,7 @@
 ;;;###autoload
 (defun encourager-enable ()
   (interactive)
-  (with-auto-pause 10
+  (with-auto-pause encourager-interval
     (encourager--play-media-in-loop encourager-media-file)))
 ;;;###autoload
 (defun encourager-disable ()
