@@ -42,108 +42,35 @@
   :group 'encourager
   :type 'string)
 
-(defcustom encourager-image-file (concat (file-name-directory buffer-file-name)  "dancing.gif")
-  "Multi-frame image file to be displayed as encourager"
-  :group 'encourager
-  :type '(file :must-match t))
-
-
-(defun encourager--get-image (encourager-buffer)
-  "Return encourager image which displayed in ENCOURAGER-BUFFER"
-  (get-char-property (point-min) 'display
-                     (or (get-buffer encourager-buffer)
-                         (error "no encourager buffer found"))))
-
-(defun encourager--pause-image-animate (&optional image)
-  "encourager--image"
-  (let ((image (or image
-                   (encourager--get-image encourager-buffer))))
-    (cancel-timer (image-animate-timer image))))
-
-(defun encourager--resume-image-animate (&optional image)
-  "encourager--image"
-  (let* ((image (or image
-                    (encourager--get-image encourager-buffer)))
-         (current-frame (image-current-frame image)))
-    (image-animate image current-frame t)))
-
-(defcustom encourager-music-player-proc-name "*encourager-music*"
+(defcustom encourager-media-player-proc-name "*encourager-media*"
   ""
   :group 'encourager
   :type '(file :must-match t))
 
-(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
+(defcustom encourager-media-file (concat (file-name-directory buffer-file-name) "夕山谣.mp4")
   ""
   :group 'encourager
   :type '(file :must-match t))
 
-(defun encourager--pause-music (&optional proc)
-  ""
-  (let ((proc (or proc
-                  (get-process encourager-music-player-proc-name))))
-    (when (processp proc) 
-      (signal-process proc 'SIGSTOP))))
 
-(defun encourager--resume-music (&optional proc)
-  ""
-  (let ((proc (or proc
-                  (get-process encourager-music-player-proc-name))))
-    (when (processp proc)
-      (signal-process proc 'SIGCONT))))
+(defun encourager--play-media-in-loop (media-file)
+  "play MEDIA-FILE in loop"
+  (unless (file-exists-p media-file)
+    (error "%s does not exist!" media-file))
+  (start-process encourager-media-player-proc-name nil "mplayer" "--ontop" "--loop=0" media-file))
 
-(defun encourager--pause ()
-  (encourager--pause-image-animate)
-  (encourager--pause-music)
-  (add-hook 'post-command-hook 'encourager--resume))
-
-(defun encourager--resume (&optional delay-seconds)
-  (let ((delay-seconds (or delay-seconds
-                           10)))
-    (encourager--resume-image-animate)
-    (encourager--resume-music)
-    (remove-hook 'post-command-hook #'encourager--resume)
-    (run-with-idle-timer delay-seconds nil #'encourager--pause)))
-
-
-(defun encourager--play-music-in-loop (music-file)
-  "play MUSIC-FILE in loop"
-  (unless (file-exists-p music-file)
-    (error "%s does not exist!" music-file))
-  (let ((proc (start-process encourager-music-player-proc-name nil "mpg123" "-q" music-file)))
-    (set-process-sentinel proc (lambda (proc event)
-                                 (when (eq 'exit (process-status proc))
-                                   (set-process-sentinel  (start-process encourager-music-player-proc-name nil "mpg123" "-q" music-file)
-                                                          (process-sentinel proc)))))))
-
-;; (defun encourager--image-show-next-frame (&optional image max-frame)
-;;   "Show next frame of IMAGE. The frame will not exceed MAX-FRAME"
-;;   (let* ((image (or image (encourager--get-image encourager-buffer)))
-;;          (max-frame (or max-frame
-;;                         (car (image-multi-frame-p image))))
-;;          (current-frame (image-current-frame image)))
-;;     (when max-frame
-;;       (let* ((next-frame (mod (+ 1 current-frame)
-;;                               max-frame)))
-;;         (image-show-frame image next-frame t)))))
 
 ;;;###autoload
 (defun encourager-enable ()
   (interactive)
-  (let ((image (create-image encourager-image-file)))
-    (when (file-exists-p encourager-music-file)
-      (encourager--play-music-in-loop encourager-music-file))
-    (when image
-      (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
-        (erase-buffer)
-        (insert-image image))
-      (encourager--resume))))
+  (with-auto-pause 10
+    (encourager--play-media-in-loop encourager-media-file)))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
-  (encourager--pause)
   (when (buffer-live-p (get-buffer encourager-buffer))
     (kill-buffer encourager-buffer))
-  (delete-process (get-process encourager-music-player-proc-name)))
+  (delete-process (get-process encourager-media-player-proc-name)))
 
 (provide 'encourager)
 
