@@ -57,11 +57,18 @@
   :group 'encourager
   :type 'number)
 
+(defcustom encourager-media-width nil
+  ""
+  :group 'encourager
+  :type 'integer)
+
 (defun encourager--play-media-in-loop (media-file)
   "play MEDIA-FILE in loop"
   (unless (file-exists-p media-file)
     (error "%s does not exist!" media-file))
-  (start-process encourager-media-player-proc-name nil "mplayer" "--ontop" "--loop=0" media-file))
+  (if encourager-media-width
+      (start-process encourager-media-player-proc-name nil "mplayer" "--ontop" "--loop=0" "-xy" (format "%d" encourager-media-width) media-file)
+    (start-process encourager-media-player-proc-name nil "mplayer" "--ontop" "--loop=0" media-file)))
 
 
 ;;;###autoload
