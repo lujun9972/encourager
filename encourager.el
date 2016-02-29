@@ -44,7 +44,7 @@
   :group 'encourager
   :type 'string)
 
-(defcustom encourager-image-file (concat (file-name-directory buffer-file-name)  "dancing.gif")
+(defcustom encourager-image-file (concat (file-name-directory buffer-file-name)  "miku.gif")
   "Multi-frame image file to be displayed as encourager"
   :group 'encourager
   :type '(file :must-match t))
