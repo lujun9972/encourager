@@ -81,6 +81,11 @@
   :group 'encourager
   :type '(file :must-match t))
 
+(defcustom encourager-interval 2
+  ""
+  :group 'encourager
+  :type 'integer)
+
 (defun encourager--pause-music (&optional proc)
   ""
   (let ((proc (or proc
@@ -128,7 +133,7 @@
         (set-window-dedicated-p (selected-window) t))
       (setq encourager--abort-function (auto-pause #'encourager--pause
                                                    #'encourager--resume
-                                                   2)))))
+                                                   encourager-interval)))))
 ;;;###autoload
 (defun encourager-disable ()
   (interactive)
