@@ -76,7 +76,7 @@
   :group 'encourager
   :type '(file :must-match t))
 
-(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "夕山谣.mp3")
+(defcustom encourager-music-file (concat (file-name-directory buffer-file-name) "miku.mp3")
   ""
   :group 'encourager
   :type '(file :must-match t))
