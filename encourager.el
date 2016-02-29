@@ -124,7 +124,8 @@
       (with-selected-window (display-buffer (get-buffer-create encourager-buffer))
         (erase-buffer)
         (insert-image image)
-        (image-animate image))
+        (image-animate image)
+        (set-window-dedicated-p (selected-window) t))
       (setq encourager--abort-function (auto-pause #'encourager--pause
                                                    #'encourager--resume
                                                    2)))))
