@@ -1,0 +1,6 @@
+* dependency
+It required [[https://github.com/lujun9972/auto-pause][auto-pause]] library which can be installed from melpa
+* usage
++ use =encourager-enable= to turn on the encourager.
+
++ use =encourager-disable= to turn off the encourager
